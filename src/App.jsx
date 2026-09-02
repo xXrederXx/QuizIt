@@ -22,16 +22,32 @@ function SwapToggle({ swapped, onChange }) {
   return <div className="swap-control"><div><strong>Swap sides</strong><small>{swapped ? 'Answer → Question' : 'Question → Answer'}</small></div><button type="button" className={`switch ${swapped ? 'on' : ''}`} role="switch" aria-checked={swapped} aria-label="Swap question and answer" onClick={() => onChange(!swapped)}><span /></button></div>
 }
 
-function ModeSelector({ onSelect, selectedSet, swapped, onSwap }) {
-  return <section className="selector-panel mode-panel"><div className="section-kicker">02 / Learning mode</div><h2>Pick your practice</h2><SwapToggle swapped={swapped} onChange={onSwap} /><div className="mode-grid"><button type="button" className="mode-option" disabled={!selectedSet} onClick={() => onSelect('flashcards')}><span className="mode-number">A</span><span><strong>Flashcards</strong><small>Reveal, then rate yourself</small></span><ChevronRight size={18} /></button><button type="button" className="mode-option" disabled={!selectedSet} onClick={() => onSelect('typing')}><span className="mode-number">B</span><span><strong>Typing</strong><small>Recall the answer yourself</small></span><ChevronRight size={18} /></button></div>{!selectedSet && <p className="hint">Select a training set first.</p>}</section>
+function RandomizeToggle({ randomized, onChange }) {
+  return <div className="swap-control"><div><strong>Randomize cards</strong><small>{randomized ? 'Shuffled queue' : 'In order'}</small></div><button type="button" className={`switch ${randomized ? 'on' : ''}`} role="switch" aria-checked={randomized} aria-label="Randomize card order" onClick={() => onChange(!randomized)}><span /></button></div>
+}
+
+function ModeSelector({ onSelect, selectedSet, swapped, randomized, onSwap, onRandomize }) {
+  return <section className="selector-panel mode-panel"><div className="section-kicker">02 / Learning mode</div><h2>Pick your practice</h2><SwapToggle swapped={swapped} onChange={onSwap} /><RandomizeToggle randomized={randomized} onChange={onRandomize} /><div className="mode-grid"><button type="button" className="mode-option" disabled={!selectedSet} onClick={() => onSelect('flashcards')}><span className="mode-number">A</span><span><strong>Flashcards</strong><small>Reveal, then rate yourself</small></span><ChevronRight size={18} /></button><button type="button" className="mode-option" disabled={!selectedSet} onClick={() => onSelect('typing')}><span className="mode-number">B</span><span><strong>Typing</strong><small>Recall the answer yourself</small></span><ChevronRight size={18} /></button></div>{!selectedSet && <p className="hint">Select a training set first.</p>}</section>
 }
 
 function CompletionScreen({ session, onAgain, onHome }) {
   return <main className="learning-shell completion-shell"><button type="button" className="back-button" onClick={onHome}><ArrowLeft size={17} /> All sets</button><div className="completion-card"><div className="completion-icon"><Sparkles size={28} /></div><div className="section-kicker">Session complete</div><h1>Set complete!</h1><p className="completion-count">{session.learned.size} / {session.total} cards learned</p><ProgressStats right={session.right} wrong={session.wrong} learned={session.learned.size} total={session.total} /><button type="button" className="primary-button" onClick={onAgain}><RotateCcw size={18} /> Start again</button></div></main>
 }
 
-function LearningSession({ set, mode, swapped, onHome }) {
-  const createSession = () => ({ queue: [...set.cards], learned: new Set(), right: 0, wrong: 0, current: set.cards[0], answered: false, lastResult: null, input: '', total: set.cards.length })
+const shuffleCards = (cards) => {
+  const shuffled = [...cards]
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1))
+    ;[shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]]
+  }
+  return shuffled
+}
+
+function LearningSession({ set, mode, swapped, randomized, onHome }) {
+  const createSession = () => {
+    const queue = randomized ? shuffleCards(set.cards) : [...set.cards]
+    return { queue, learned: new Set(), right: 0, wrong: 0, current: queue[0], answered: false, lastResult: null, input: '', total: set.cards.length }
+  }
   const [session, setSession] = useState(createSession)
   const cardIndex = set.cards.findIndex((card) => card.id === session.current?.id) + 1
   const activeCard = swapped ? { question: session.current?.answer, answer: session.current?.question } : session.current
@@ -74,9 +90,10 @@ function App() {
   const [selectedSet, setSelectedSet] = useState(null)
   const [mode, setMode] = useState(null)
   const [swapped, setSwapped] = useState(false)
+  const [randomized, setRandomized] = useState(false)
   useEffect(() => { document.title = selectedSet ? `${selectedSet.name} | QuizIt` : 'QuizIt | Learn it your way' }, [selectedSet])
-  if (selectedSet && mode) return <LearningSession set={selectedSet} mode={mode} swapped={swapped} onHome={() => setMode(null)} />
-  return <div className="app-shell"><header className="app-header"><div className="brand"><span className="brand-icon"><Check size={19} strokeWidth={3} /></span><span>QuizIt</span></div><span className="header-note">Learn it. Lock it in.</span></header><main className="home-layout"><div className="intro"><div className="eyebrow"><span className="eyebrow-dot" /> Your focused study space</div><h1>Small steps.<br /><em>Strong recall.</em></h1><p>Choose a set, pick a mode, and make every card count.</p></div><div className="flow"><SetSelector selectedSet={selectedSet} onSelect={(set) => { setSelectedSet(set); setMode(null) }} /><ModeSelector selectedSet={selectedSet} swapped={swapped} onSwap={setSwapped} onSelect={setMode} /></div></main><footer>QuizIt <span /> A lightweight learning tool</footer></div>
+  if (selectedSet && mode) return <LearningSession set={selectedSet} mode={mode} swapped={swapped} randomized={randomized} onHome={() => setMode(null)} />
+  return <div className="app-shell"><header className="app-header"><div className="brand"><span className="brand-icon"><Check size={19} strokeWidth={3} /></span><span>QuizIt</span></div><span className="header-note">Learn it. Lock it in.</span></header><main className="home-layout"><div className="intro"><div className="eyebrow"><span className="eyebrow-dot" /> Your focused study space</div><h1>Small steps.<br /><em>Strong recall.</em></h1><p>Choose a set, pick a mode, and make every card count.</p></div><div className="flow"><SetSelector selectedSet={selectedSet} onSelect={(set) => { setSelectedSet(set); setMode(null) }} /><ModeSelector selectedSet={selectedSet} swapped={swapped} randomized={randomized} onSwap={setSwapped} onRandomize={setRandomized} onSelect={setMode} /></div></main><footer>QuizIt <span /> A lightweight learning tool</footer></div>
 }
 
 export default App
