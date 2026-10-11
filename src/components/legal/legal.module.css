@@ -1,0 +1,9 @@
+.limiter {
+  max-width: 80ch;
+  width: 80ch;
+}
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
